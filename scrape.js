@@ -4,90 +4,66 @@ const inquirer = require('inquirer');
 const fs = require('mz/fs');
 const XLSX = require('xlsx');
 
-const TEST_UIN = '674640002';
-// newline delimited list of UINs with no header
-const UIN_FILE = 'uins.txt';
-const START_PAGE = 'https://darsweb.admin.uillinois.edu:443/darswebadv_uic/servlet/EASDarsServlet';
-const USERNAME_SELECTOR = '#netid';
-const PASSWORD_SELECTOR = '#easpass';
-const SUBMIT_SELECTOR = '#easFormId > input';
-// on Dars Database Login screen...
-const LOGIN_SELECTOR = 'input[type="submit"]';
-// on Dars enter UIN screen...
-const UIN_TEXTBOX_SELECTOR = '#userID';
-const CONTINUE_BUTTON = 'input[value="Continue"]';
+// XLSX file with headers "Last Name" "First Name" "UIN"
+const UIN_FILE = 'advisees.xlsx';
 
+
+const START_PAGE = 'https://darsweb.admin.uillinois.edu:443/darswebadv_uic/servlet/EASDarsServlet';
 // form to GET to for actual dars report:
 const DARS_REPORT_URL = "https://darsweb.admin.uillinois.edu/darswebadv_uic/bar"
 
-async function uins (fName) {
-
-    const workbook = XLSX.readFile("advisees.xlsx");
+function uins(fName) {
+    const workbook = XLSX.readFile(fName);
     const ws = workbook.Sheets[workbook.SheetNames[0]];
     return XLSX.utils.sheet_to_json(ws);
-
-    /*
-
-    Old newline delimited uin file
-    const rawfile = await fs.readFile(fName);
-    const uins = rawfile.toString().split('\n').filter((x) => x.length > 0 && x.indexOf("UIN") == -1);
-    return uins;
-    */
 }
 
-async function lp () {
-    return await inquirer.prompt([
-        {
-          message: 'Enter your netID',
-          name: 'netID'
+async function lp() {
+    return await inquirer.prompt([{
+            message: 'Enter your netID',
+            name: 'netID'
         },
         {
-          type: 'password',
-          message: 'Enter your password',
-          name: 'password'
-        }]);
-    }
+            type: 'password',
+            message: 'Enter your password',
+            name: 'password'
+        }
+    ]);
+}
 
-(async () => {
-    const uin_list = await uins(UIN_FILE);
-    const browser = await puppeteer.launch({headless: false});
+(async() => {
+    const uin_list = uins(UIN_FILE);
+    const browser = await puppeteer.launch(); // {headless: false});
     const page = await browser.newPage();
     await page.goto(START_PAGE);
 
-    // new tab workaround from https://github.com/GoogleChrome/puppeteer/issues/386#issuecomment-336590028
-    await page.evaluate(() => {
-        window.open = (new_url) => {
-            console.log("intercepted window.open");
-            window.location.href = new_url}
-    });
-
-
     const creds = await lp();
-    await page.click(USERNAME_SELECTOR);
+    await page.click('#netid');
     await page.keyboard.type(creds.netID);
-    await page.click(PASSWORD_SELECTOR);
+    await page.click('#easpass');
     await page.keyboard.type(creds.password);
-    await page.click(SUBMIT_SELECTOR);
+    await page.click('#easFormId > input');
     await page.waitForNavigation();
 
     // database login
     await page.evaluate(() => {
         // CFQ is College of Engineering
-        document.querySelector('select').value="CFQ";
+        document.querySelector('select').value = "CFQ";
     });
-    await page.click(LOGIN_SELECTOR);
+    await page.click('input[type="submit"]');
     await page.waitForNavigation();
-    
-    
+
+
     // save off this url to go back to to repeat the process
-    const STUDENT_SELECTION_URL = page.url(); 
- 
-    for(uin_idx in uin_list) {
-        const this_uin = uin_list[uin_idx];
+    const STUDENT_SELECTION_URL = page.url();
+
+    for (uin_idx in uin_list) {
+        const this_uin = uin_list[uin_idx]["UIN"];
+        const full_name = uin_list[uin_idx]["First Name"].trim() + " " + uin_list[uin_idx]["Last Name"];
         // student selection
-        await page.click(UIN_TEXTBOX_SELECTOR);
+        await page.click('#userID');
         await page.keyboard.type(this_uin);
-        await page.click(CONTINUE_BUTTON);
+        await page.click('input[value="Continue"]');
         await page.waitForNavigation();
 
         // click audits dropdown
@@ -105,12 +81,12 @@ async function lp () {
         await page.waitFor(3000);
         await page.click('input[value="Refresh List"]');
         await page.waitForNavigation();
-        */  
-        let report_query  = await page.evaluate(() => {
+        */
+        let report_query = await page.evaluate(() => {
             var retval = {};
             retval.instidq = document.querySelector('input[name="instidq"]').value;
-            retval.instid  = document.querySelector('input[name="instid"]').value;
-            retval.instcd  = document.querySelector('input[name="instcd"]').value;
+            retval.instid = document.querySelector('input[name="instid"]').value;
+            retval.instcd = document.querySelector('input[name="instcd"]').value;
             retval.DETAILS = document.querySelector('input[name="DETAILS"]').value;
             var sourcecode = document.querySelector('input[value="Open Audit"]').onclick.toString().split("'");
             retval.job_id = sourcecode[1];
@@ -121,21 +97,14 @@ async function lp () {
 
         // on the audit page - get printer friendly version
         await page.click('#openAllLink');
-        
-        // await page.pdf({path: this_uin + '.pdf'});
-        await page.screenshot({path: this_uin + '.png'});
+
+        await page.pdf({
+            path: full_name + '.pdf'
+        });
+        // await page.screenshot({path: full_name + '.png'});
 
         await page.goto(STUDENT_SELECTION_URL);
     }
 
-    
-    
-    
     await browser.close();
 })();
-
-/*
-(async () => {
-    await uins(UIN_FILE);
-})();
-*/
