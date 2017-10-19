@@ -77,7 +77,7 @@ async function lp() {
         await page.waitForNavigation();
 
         // The page was auto refreshing once the audit was done for me, so just
-        // wait for that to hpapen...
+        // wait for that to happen...
         await page.waitForSelector('input[value="Open Audit"]');
         let report_query = await page.evaluate(() => {
             var retval = {};
