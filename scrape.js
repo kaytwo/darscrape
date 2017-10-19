@@ -77,11 +77,6 @@ async function lp() {
         await page.waitForNavigation();
 
         await page.waitForSelector('input[value="Open Audit"]');
-        /* alternate slow way
-        await page.waitFor(3000);
-        await page.click('input[value="Refresh List"]');
-        await page.waitForNavigation();
-        */
         let report_query = await page.evaluate(() => {
             var retval = {};
             retval.instidq = document.querySelector('input[name="instidq"]').value;
@@ -96,11 +91,10 @@ async function lp() {
         await page.goto(DARS_REPORT_URL + "?" + querystring.stringify(report_query));
 
         // on the audit page - get printer friendly version
+        await page.waitForSelector('#openAllLink');
         await page.click('#openAllLink');
 
-        await page.pdf({
-            path: full_name + '.pdf'
-        });
+        await page.pdf({path: full_name + '.pdf'});
         // await page.screenshot({path: full_name + '.png'});
 
         await page.goto(STUDENT_SELECTION_URL);
