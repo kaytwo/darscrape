@@ -76,6 +76,8 @@ async function lp() {
         await page.click('#SUBMITTABLE > tbody > tr:nth-child(2) > td > input[type="submit"]');
         await page.waitForNavigation();
 
+        // The page was auto refreshing once the audit was done for me, so just
+        // wait for that to hpapen...
         await page.waitForSelector('input[value="Open Audit"]');
         let report_query = await page.evaluate(() => {
             var retval = {};
