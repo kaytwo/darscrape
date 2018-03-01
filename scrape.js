@@ -3,11 +3,12 @@ const puppeteer = require('puppeteer');
 const inquirer = require('inquirer');
 const fs = require('mz/fs');
 const XLSX = require('xlsx');
-const creds = require('./secrets');
+const dotenv = require('dotenv').config();
+
 
 const START_PAGE = 'https://darsweb.admin.uillinois.edu:443/darswebadv_uic/servlet/EASDarsServlet';
 // form to GET to for actual dars report:
-const DARS_REPORT_URL = "https://darsweb.admin.uillinois.edu/darswebadv_uic/bar"
+const DARS_REPORT_URL = "https://darsweb.admin.uillinois.edu/darswebadv_uic/bar";
 
 function uins(fName) {
     // XLSX file with headers "Last Name" "First Name" "UIN"
@@ -35,7 +36,11 @@ async function download_dars( uin_file, page, start_url) {
 
     for (uin_idx in uin_list) {
         const this_uin = uin_list[uin_idx]["UIN"];
-        const full_name = uin_list[uin_idx]["First Name"].trim() + " " + uin_list[uin_idx]["Last Name"];
+        const full_name = uin_list[uin_idx]["First Name"].trim() + " " + uin_list[uin_idx]["Last Name"] + " " + this_uin.trim() + ".pdf";
+        if (await fs.exists(full_name)){
+            console.log(`${full_name} exists, skipping`);
+            continue;
+        }
         // student selection
         await page.click('#userID');
         await page.keyboard.type(this_uin);
@@ -80,7 +85,7 @@ async function download_dars( uin_file, page, start_url) {
         await page.waitForSelector('#openAllLink');
         await page.click('#openAllLink');
 
-        await page.pdf({path: full_name + '.pdf'});
+        await page.pdf({path: full_name});
         // await page.screenshot({path: full_name + '.png'});
 
         await page.goto(start_url);
@@ -99,9 +104,9 @@ async function download_dars( uin_file, page, start_url) {
     await page.goto(START_PAGE);
 
     await page.click('#netid');
-    await page.keyboard.type(creds.netID);
+    await page.keyboard.type(process.env.netID);
     await page.click('#easpass');
-    await page.keyboard.type(creds.password);
+    await page.keyboard.type(process.env.password);
     await page.click('#easFormId > input');
     await page.waitForNavigation();
 
