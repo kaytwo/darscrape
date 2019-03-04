@@ -6,6 +6,8 @@ const XLSX = require('xlsx');
 const dotenv = require('dotenv').config();
 
 
+
+const UACHIEVE_START = "https://uachieve.apps.uillinois.edu/uachieve_uic_shib/student/search.html";
 const START_PAGE = 'https://darsweb.admin.uillinois.edu:443/darswebadv_uic/servlet/EASDarsServlet';
 // form to GET to for actual dars report:
 const DARS_REPORT_URL = "https://darsweb.admin.uillinois.edu/darswebadv_uic/bar";
@@ -42,16 +44,15 @@ async function download_dars( uin_file, page, start_url) {
             continue;
         }
         // student selection
-        await page.click('#userID');
+        await page.click('#stuno');
         await page.keyboard.type(this_uin);
-        await page.click('input[value="Continue"]');
+        await page.click('input[value="Submit"]');
         await page.waitForNavigation();
 
-        // click audits dropdown
-        await page.click("#main > div > a:nth-child(5)");
-        // start new audit
-        await page.click("#menuAUDITS > a:nth-child(2)");
-        await page.waitForNavigation();
+        // request a new audit even if one has already been done
+        await page.click('a[href="/uachieve_uic_shib/audit/create.html"]')
+      await page.waitForNavigation();
+      await page.click('#runAudit');
 
         // start the default selected audit
         await page.click('#SUBMITTABLE > tbody > tr:nth-child(2) > td > input[type="submit"]');
@@ -101,7 +102,7 @@ async function download_dars( uin_file, page, start_url) {
     // for each pair
     const browser = await puppeteer.launch(); // {headless: false});
     const page = await browser.newPage();
-    await page.goto(START_PAGE);
+    await page.goto(UACHIEVE_START);
 
     await page.click('#netid');
     await page.keyboard.type(process.env.netID);
@@ -110,15 +111,6 @@ async function download_dars( uin_file, page, start_url) {
     await page.click('#easFormId > input');
     await page.waitForNavigation();
 
-
-    // database login
-    await page.evaluate(() => {
-        // CFQ is College of Engineering
-        document.querySelector('select').value = "CFQ";
-    });
-    await page.click('input[type="submit"]');
-    await page.waitForNavigation();
-    // save off this url to go back to to repeat the process
     const start_url = page.url();
 
 
